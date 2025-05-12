@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infografía Interactiva DCVS</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #grafo-container {
+            width: 100%;
+            height: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fef08a; /* Amarillo pálido */
+            border-radius: 10px;
+        }
+        .node {
+            cursor: pointer;
+            fill: #1e40af; /* Azul oscuro */
+            stroke: #d9d9d9;
+            stroke-width: 2px;
+        }
+        .node:hover {
+            fill: #2563eb; /* Azul más claro al pasar el ratón */
+        }
+        .label {
+            font-size: 14px;
+            font-weight: 500; /* Medio */
+            fill: #f97316; /* Anaranjado */
+            text-anchor: middle;
+            user-select: none;
+        }
+        .link {
+            stroke: #9ca3af; /* Gris claro */
+            stroke-width: 2px;
+        }
+        .node-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: none;
+            max-width: 300px;
+            z-index: 10;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+        .node-info h2 {
+            font-size: 1.5rem;
+            font-weight: 600; /* Semi-negrita */
+            margin-bottom: 10px;
+            color: #1e40af;
+        }
+        .node-info p {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #4b5563;
+            margin-bottom: 10px;
+        }
+        .node-info ul {
+            list-style: disc;
+            padding-left: 20px;
+            margin-bottom: 10px;
+        }
+        .node-info li {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #4b5563;
+        }
+        .node-info.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="container mx-auto bg-white rounded-lg shadow-md p-8">
+        <h1 class="text-2xl font-semibold text-blue-700 mb-6 text-center">Infografía Interactiva: Sistemas de Control de Versiones</h1>
+        <div id="grafo-container" class="rounded-lg"></div>
+        <div id="node-info" class="node-info">
+            <h2>Detalles del Nodo</h2>
+            <p>Información detallada del elemento seleccionado.</p>
+        </div>
+    </div>
+    <script>
+        const data = {
+            nodes: [
+                { id: "introduccion", label: "Introducción", content: "Se describe la importancia de los VCS en el desarrollo de software moderno." },
+                { id: "descripcion_cvs", label: "Descripción general de un CVS", content: "Explica qué es un sistema de control de versiones y su propósito." },
+                { id: "caracteristicas_cvs", label: "Características principales de un CVS", content: "Detalla las características clave de un CVS, como la arquitectura cliente-servidor y el historial de versiones." },
+                { id: "cvcs", label: "CVCS", content: "Sistemas de Control de Versiones Centralizados (CVCS). Describe el modelo centralizado, donde un único repositorio central almacena todas las versiones." },
+                { id: "caracteristicas_cvcs", label: "Características de los CVCS", content: "Profundiza en las características de los CVCS, como el repositorio único y la administración centralizada." },
+                { id: "ejemplos_cvcs", label: "Ejemplos de CVCS", content: "Menciona ejemplos de sistemas CVCS como Subversion (SVN) y Concurrent Versions System(CVS)." },
+                { id: "dvcs", label: "DVCS", content: "Sistemas de Control de Versiones Distribuidos (DVCS). Describe el modelo distribuido, donde cada desarrollador tiene una copia completa del repositorio." },
+                { id: "caracteristicas_dvcs", label: "Características de los DVCS", content: "Detalla las características de los DVCS, como el repositorio local completo y las operaciones locales." },
+                { id: "ejemplos_dvcs", label: "Ejemplos de DVCS", content: "Menciona ejemplos de DVCS como Git, Mercurial, Baazar y Fossil." },
+                 { id: "diferencias_cvcs_dvcs", label: "Diferencias CVCS vs DVCS", content: "Compara CVCS y DVCS en términos de dependencia del servidor, colaboración, velocidad y seguridad." },
+                { id: "aspectos_decision", label: "Aspectos Decisión", content: "Describe los factores a considerar al elegir entre CVCS y DVCS." },
+                { id: "colaboracion_equipo", label: "Colaboración y Estructura", content: "Explica cómo el tamaño del equipo, la necesidad de trabajo offline y el modelo de colaboración influyen en la elección del VCS." },
+                { id: "infraestructura_mantenimiento", label: "Infraestructura y Mantenimiento", content: "Considera los requisitos del servidor, la complejidad de la administración y la escalabilidad." },
+                { id: "flujo_trabajo_ramificacion", label: "Flujo de Trabajo y Ramificación", content: "Discute la facilidad de ramificación y fusión, la gestión de cambios y las capacidades de auditoría." },
+                { id: "rendimiento_velocidad", label: "Rendimiento y Velocidad", content: "Analiza el impacto del tamaño del repositorio y las operaciones comunes en el rendimiento." },
+                { id: "tolerancia_recuperacion", label: "Tolerancia a Fallos", content: "Evalúa la tolerancia a la pérdida del repositorio central y la facilidad de recuperación de errores." },
+                { id: "checkpoints_decision", label: "Checkpoints Decisión", content: "Presenta una lista de preguntas clave para guiar la selección del VCS." },
+                { id: "estructura_equipo_checkpoints", label: "Estructura y Colaboración", content: "Preguntas detalladas sobre la estructura del equipo y colaboración." },
+                { id: "infraestructura_mantenimiento_checkpoints", label: "Infraestructura y Mantenimiento", content: "Preguntas sobre la infraestructura y el mantenimiento del sistema." },
+                { id: "flujo_trabajo_ramificacion_checkpoints", label: "Flujo de Trabajo y Ramificación", content: "Preguntas sobre la complejidad del flujo de trabajo y la gestión de ramas." },
+                { id: "rendimiento_escalabilidad_checkpoints", label: "Rendimiento y Escalabilidad", content: "Preguntas sobre el rendimiento y la escalabilidad del repositorio." },
+                { id: "tolerancia_fallos_recuperacion_checkpoints", label: "Tolerancia a Fallos", content: "Preguntas sobre la tolerancia a fallos y la recuperación de datos." },
+				{ id: "plataformas_cvcs", label: "Plataformas CVCS", content: "Menciona ejemplos de plataformas CVCS como : Perforce TeamHub, Assembla, SourceForge", x: 179, y: 322 },
+				{ id: "plataformas_dvcs", label: "Plataformas DVDS", content: "Menciona ejemplos de plataformas DVCS como: Gitea, Gogs, TortoiseGit, GitLab, GitHub, BitBucket, Beanstalk, Allura", x: 700, y: 430},			
+
+            ],
+            links: [
+                { source: "introduccion", target: "descripcion_cvs" },
+                { source: "descripcion_cvs", target: "caracteristicas_cvs" },
+                { source: "descripcion_cvs", target: "cvcs" },
+                { source: "descripcion_cvs", target: "dvcs" },
+                { source: "cvcs", target: "caracteristicas_cvcs" },
+                { source: "cvcs", target: "ejemplos_cvcs" },
+				{ source: "cvcs", target: "plataformas_cvcs" },
+                { source: "dvcs", target: "caracteristicas_dvcs" },
+				{ source: "dvcs", target: "plataformas_dvcs" },
+                { source: "dvcs", target: "ejemplos_dvcs" },
+                { source: "diferencias_cvcs_dvcs", target: "cvcs" },
+                { source: "diferencias_cvcs_dvcs", target: "dvcs" },
+                { source: "aspectos_decision", target: "diferencias_cvcs_dvcs" },
+                { source: "aspectos_decision", target: "colaboracion_equipo" },
+                { source: "aspectos_decision", target: "infraestructura_mantenimiento" },
+                  { source: "aspectos_decision", target: "flujo_trabajo_ramificacion" },
+                  { source: "aspectos_decision", target: "rendimiento_velocidad" },
+                  { source: "aspectos_decision", target: "tolerancia_recuperacion" },
+				  { source: "checkpoints_decision", target: "aspectos_decision" },
+                  { source: "checkpoints_decision", target: "estructura_equipo_checkpoints" },
+                { source: "checkpoints_decision", target: "infraestructura_mantenimiento_checkpoints" },
+                { source: "checkpoints_decision", target: "flujo_trabajo_ramificacion_checkpoints" },
+                { source: "checkpoints_decision", target: "rendimiento_escalabilidad_checkpoints" },
+                { source: "checkpoints_decision", target: "tolerancia_fallos_recuperacion_checkpoints" },
+            ],
+        };
+
+        const grafoContainer = d3.select("#grafo-container");
+        const nodeInfoDiv = d3.select("#node-info");
+
+        const width = grafoContainer.node().getBoundingClientRect().width;
+        const height = grafoContainer.node().getBoundingClientRect().height;
+
+        const svg = grafoContainer
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const simulation = d3.forceSimulation(data.nodes)
+            .force("link", d3.forceLink(data.links).id(d => d.id).distance(120))
+            .force("charge", d3.forceManyBody().strength(-100))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collision", d3.forceCollide().radius(30));
+
+        const link = svg.selectAll(".link")
+            .data(data.links)
+            .enter().append("line")
+            .attr("class", "link");
+
+        const node = svg.selectAll(".node")
+            .data(data.nodes)
+            .enter().append("circle")
+            .attr("class", "node")
+            .attr("r", 20)
+            .call(drag(simulation));
+
+        const label = svg.selectAll(".label")
+            .data(data.nodes)
+            .enter().append("text")
+            .attr("class", "label")
+            .text(d => d.label);
+
+        node.on("click", (event, d) => {
+            const nodeContent = data.nodes.find(n => n.id === d.id)?.content || "No hay información disponible.";
+            nodeInfoDiv.html(`<h2>${d.label}</h2><p>${nodeContent}</p>`);
+            nodeInfoDiv.classed("show", true);
+             const containerRect = grafoContainer.node().getBoundingClientRect();
+            const infoRect = nodeInfoDiv.node().getBoundingClientRect();
+
+            // Calculate available space on each side
+            const spaceRight = containerRect.right - event.x;
+            const spaceLeft = event.x - containerRect.left;
+            const spaceBottom = containerRect.bottom - event.y;
+            const spaceTop = event.y - containerRect.top;
+
+            // Determine best side to display the info box
+            if (spaceRight > infoRect.width && spaceRight > spaceLeft) {
+                // Show on the right
+                nodeInfoDiv.style("left", `${event.x + 10}px`);
+                nodeInfoDiv.style("top", `${event.y - infoRect.height / 2}px`);
+            } else if (spaceLeft > infoRect.width) {
+                // Show on the left
+                 nodeInfoDiv.style("left", `${event.x - infoRect.width - 10}px`);
+                  nodeInfoDiv.style("top", `${event.y - infoRect.height / 2}px`);
+            }
+             else if (spaceBottom > infoRect.height && spaceBottom > spaceTop)
+            {
+                 nodeInfoDiv.style("left", `${event.x + 10}px`);
+                nodeInfoDiv.style("top", `${event.y + 10}px`);
+            }
+            else {
+                //show on top
+                nodeInfoDiv.style("left", `${event.x + 10}px`);
+                nodeInfoDiv.style("top", `${event.y - infoRect.height - 10}px`);
+            }
+        });
+
+        // Close the node info box when clicking outside
+        document.addEventListener("click", (event) => {
+            if (!nodeInfoDiv.node().contains(event.target) && !event.target.classList.contains('node') && event.target.tagName !== 'text') {
+                nodeInfoDiv.classed("show", false);
+            }
+        });
+
+        function drag(simulation) {
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended);
+        }
+
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            label
+                .attr("x", d => d.x)
+                .attr("y", d => d.y + 5);
+        });
+    </script>
+</body>
+</html>
